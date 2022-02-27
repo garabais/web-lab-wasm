@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+	<!-- Basic Page Needs
+  –––––––––––––––––––––––––––––––––––––––––––––––––– -->
+	<meta charset="utf-8">
+	<title>WebAssembly in Rust</title>
+	<meta name="description" content="Web Assembly in C tutorial">
+	<meta name="author" content="Xavier Garabito">
+
+	<!-- Mobile Specific Metas
+  –––––––––––––––––––––––––––––––––––––––––––––––––– -->
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+
+	<!-- FONT
+  –––––––––––––––––––––––––––––––––––––––––––––––––– -->
+	<link href="//fonts.googleapis.com/css?family=Raleway:400,300,600" rel="stylesheet" type="text/css">
+
+	<!-- CSS
+  –––––––––––––––––––––––––––––––––––––––––––––––––– -->
+	<link rel="stylesheet" href="css/normalize.css">
+	<link rel="stylesheet" href="css/skeleton.css">
+
+	<!-- Favicon
+  –––––––––––––––––––––––––––––––––––––––––––––––––– -->
+	<link rel="icon" type="image/png" href="images/favicon.png">
+
+
+
+</head>
+
+<body>
+
+	<div class="container">
+		<div class="row">
+			<div class="twelve columns" style="margin-top: 15%">
+				<h1>WebAssembly in Rust</h1>
+				<p>
+					Rust popularity has exploded in the last years and is the most popular language among WebAssembly
+					developers. Throughout this page you will find a brief introduction on all you need to know to use Rust on the web. 
+				</p>
+
+			</div>
+		</div>
+
+		<div class="row">
+			<div class="twelve columns">
+				<h2>Installing Rust</h2>
+				<p>
+					Before we could start using Rust in the web we must install the Rust compiler in our machine. To install Rust
+					you should follow the install introductions in the <a href="https://www.rust-lang.org/tools/install">official Rust page</a>.
+					The most common way to install Rust it's a script called rustup that will instal the latest stable version of the compiler and the package manager.
+				</p>
+				<p>
+					If you are running Windows you should also install <a href="https://visualstudio.microsoft.com/visual-cpp-build-tools/">Microsoft C++ Build Tools</a> 
+				</p>
+			</div>
+		</div>
+
+		<div class="row">
+			<div class="twelve columns">
+				<h2>wasm-pack</h2>
+				<p>
+					Wasm-pack is the tool that help Rust developers to compile Rust code to WebAssembly and create al the artifacts to run it easily in the browser. 
+					You can install it using the following command.
+				</p>
+				<pre><code>cargo install wasm-pack</code></pre>
+			</div>
+		</div>
+
+		<div class="row">
+			<div class="twelve columns">
+				<h2>Setting up our project</h2>
+				<p>
+					The First thing to do is tell cargo to create a new project, the following command will tell cargo to create a new library with the name hello-wasm
+				</p>
+				<pre><code>cargo new --lib hello-wasm</code></pre>
+				<p>The project will be in a folder with the same name and will include a src folder where we will write our code and a cargo.toml file, this file is like the package.json
+					it contains all the dependencies and configurations of our project.
+				</p>
+			</div>
+		</div>
+
+		<div class="row">
+			<div class="six columns">
+				<h3>cargo.toml</h3>
+				<p>
+					There are a couple of changes wee need to do in the cargo.toml file, first we need set up dynamic linking by lib section and set up the crate-type to cdylib.
+					The second thing is to add wasm-bindgen as a dependency, this dependency will allow us to export Rust functions to Javascript and use Javascript functions from Rust.
+				</p>
+				<p>Your cargo.toml file should look something like this.</p>
+			</div>
+			<div class="six columns" >
+				<pre><code>[package]
+name = "hello-wasm"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+wasm-bindgen = "0.2"</code></pre>
+			</div>
+		</div>
+
+		<div class="row">
+			<div class="twelve columns">
+				<h2>Code</h2>
+				<h3>Imports</h3>
+				<p>
+					The first thing we should do is to import wasm-bindgen, we will need this later for importing and exporting functions between Rust and Javascript You can add this 
+					line to the beginning of the file to import it.
+				</p>
+				<pre><code>use wasm_bindgen::prelude::*;</code></pre>
+			</div>
+		</div>
+
+		<div class="row">
+			<div class="twelve columns">
+				<h3>Importing Javascript functions to Rust</h3>
+				<p>
+					Unlike Javascript, Rust is a statically typed language, which means that in order to use Javascript functions in rust we must translate the function signature using types.
+				</p>
+				<p>
+					Lets use the alert function as an example, the alert function Javascript signature is <code>function alert(message)</code>. Where the message we pass to the function is a string. 
+					So we can reproduce the same signature in rust like this <code>fn alert(s: &str)</code>, here the function alert receives a reference to a str (the rust primitive for strings).
+				</p>
+				<p>
+					Now that we have the rust equivalent function signature we can tell add it to the code, to add it first we need to create and extern block, this will tell the rust compiler that the 
+					function is defined somewhere else and we don't need to write and implementation for it. Then we need to add the wasm_bindgen attribute to the extern block, this will tell wasm pack 
+					to link this function with the corresponding Javascript one. The end result should look something like this.
+				</p>
+				<pre><code>#[wasm_bindgen]
+extern {
+	fn alert(s: &str);
+}</code></pre>
+
+			<p>
+				Once we do that we can use the alert function in our Rust code. Lets create a function that greets the user using the Javascript alert.
+			</p>
+			<pre><code>fn greet(name: &str) {
+	alert(&format!("Hello, {}!", name));
+}</code></pre>
+			</div>
+		</div>
+
+		<div class="row">
+			<div class="twelve columns">
+				<h3>Exporting Rust functions to Javascript</h3>
+				
+				<p>
+					Exporting rust functions to Javascript is way simpler than from Javascript to Rust, there is only 2 thing wee need to do, first is to make the function
+					public with the <code>pub</code> keyword, second is to add the wasm-bindgen attribute to tell wasm-pack to export it to Javascript. Lets export our greet function to Javascript.
+
+					<pre><code>#[wasm_bindgen]
+pub fn greet(name: &str) {
+	alert(&format!("Hello, {}!", name));
+}</code></pre>
+
+			</div>
+		</div>
+
+		<div class="row">
+			<div class="twelve columns">
+				<h2>Compiling our code</h2>
+				<p>
+					If you have been following the instructions you could should look like this.
+				</p>
+				<pre><code>use wasm_bindgen::prelude::*;
+
+#[wasm_bindgen]
+extern {
+	fn alert(s: &str);
+}
+
+#[wasm_bindgen]
+pub fn greet(name: &str) {
+	alert(&format!("Hello, {}!", name));
+}</code></pre>
+				<p>
+					Now to compile the project you only need to run the next command in the project directory.
+				</p>
+				<pre><code>wasm-pack build --target web</code></pre>
+				<p>
+					Wasm-pack will compile the project and create a folder called pkg, this folder will have the WebAssembly of the program and other files like a Javascript file to call the generated code.
+				</p>
+			</div>
+		</div>
+
+		<div class="row">
+			<div class="twelve columns">
+				<h2>Using the WebAssembly</h2>
+				<p>
+					Running the code is as easy as import the Javascript file generated by wasm-pack (in this case pkg/hello_wasm.js).
+					Now we can invoke it from Javascript, don't forget to add the <code>type="module"</code> attribute to the Javascript tag where you try to use it.
+					This is an example of how you would call the greet function we just created.
+
+				</p>
+
+				<pre><code>import init, {greet} from "./pkg/hello_wasm.js";
+init().then(() => {
+	greet("WebAssembly")
+});</code></pre>
+			</div>
+		</div>
+
+		<div class="row">
+			<div class="twelve columns">
+				<h2>Lets try it</h2>
+				<p>
+					Here we have a live demo of the greet function, feel free to try it!
+				</p>
+			</div>
+		</div>
+
+		<div class="row">
+			<div class="four columns">
+				<label for="greetName">Greet Name</label>
+              	<input class="u-full-width" type="text" placeholder="World" id="greetName">
+			</div>
+		</div>
+
+		<button class="button-primary" id="wasmButton" style="margin-bottom: 15%">Greet</button>
+	</div>
+
+		<!-- Javascript
+  ––––––––––––––––––––––––––––––––––––––––––––––––––-->
+  <script type="module" src="js/main.js"></script>
+
+</body>
+
+</html>
